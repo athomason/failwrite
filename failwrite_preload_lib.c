@@ -1,3 +1,8 @@
+/*
+ * LD_PRELOAD-able overrides for glibc functions.
+ * Inspiration from libfiu: http://blitiri.com.ar/p/libfiu/
+ */
+
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
