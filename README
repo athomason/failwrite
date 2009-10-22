@@ -58,3 +58,8 @@ CAVEATS
 
 * failwrite_preload runs the target executable under its own PID;
   failwrite_ptrace runs it in a child process.
+
+AUTHOR
+------
+
+Adam Thomason, athomason@cpan.org
