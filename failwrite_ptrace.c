@@ -14,6 +14,7 @@
 #include <string.h>
 #include <sys/ptrace.h>
 #include <sys/reg.h>
+#include <sys/resource.h>
 #include <sys/wait.h>
 #include <sys/syscall.h>
 #include <sys/user.h>
@@ -41,7 +42,6 @@
 
 #endif
 
-#define MAX_FILEHANDLES 1024
 #define MAX_PATH_LEN 1024
 #define WRITE_ERROR ENOSPC
 #define DEBUG 0
@@ -60,9 +60,12 @@ main(int argc, char** argv)
 
     char* pattern = argv[1];
     char* program = argv[2];
-    char watched[MAX_FILEHANDLES];
+    char* watched_fds;
 
-    memset(&watched, 0, sizeof(watched));
+    struct rlimit lim;
+    getrlimit(RLIMIT_NOFILE, &lim);
+    assert(lim.rlim_max > 0);
+    watched_fds = calloc(lim.rlim_max, 1);
 
     /* match filenames with POSIX regular expressions */
     regex_t reg;
@@ -80,7 +83,7 @@ main(int argc, char** argv)
             perror("ptrace(PTRACE_TRACEME, ...)");
             return EXIT_FAILURE;
         }
-        kill(getpid(), SIGSTOP);
+        kill(getpid(), SIGSTOP); /* halt here until parent restarts us */
         execv(program, &argv[2]);
         perror(program);
         _exit(EXIT_FAILURE);
@@ -123,10 +126,8 @@ main(int argc, char** argv)
                 #endif
 
                 /* retval is fd */
-                if (retval >= 0 && !regexec(&reg, path_buf, 0, NULL, 0)) {
-                    assert(retval < MAX_FILEHANDLES);
-                    watched[retval] = 1;
-                }
+                if (retval >= 0 && !regexec(&reg, path_buf, 0, NULL, 0))
+                    watched_fds[retval] = 1;
                 break;
               }
 
@@ -134,7 +135,7 @@ main(int argc, char** argv)
                 /* forget interesting handles when they're closed */
                 int fd = regs.SYSCALL_ARG1;
                 if (fd >= 0)
-                    watched[fd] = 0;
+                    watched_fds[fd] = 0;
 
                 #if DEBUG
                 fprintf(stderr, "close(%d) = %ld\n", fd, retval);
@@ -151,7 +152,7 @@ main(int argc, char** argv)
                 #endif
 
                 /* first arg to write is fd */
-                if (watched[regs.SYSCALL_ARG1]) {
+                if (watched_fds[regs.SYSCALL_ARG1]) {
                     retval = -WRITE_ERROR;
                     if (ptrace(PTRACE_POKEUSER, pid, word_size * SYSCALL_RET_OFFSET, retval) < 0) {
                         perror("retvalset: ptrace(PTRACE_POKEUSER, ...)");

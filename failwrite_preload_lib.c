@@ -3,6 +3,7 @@
  * Inspiration from libfiu: http://blitiri.com.ar/p/libfiu/
  */
 
+#include <assert.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -56,6 +57,7 @@ void __attribute__((constructor)) _fw_init(void)
     /* initialize fd array */
     struct rlimit lim;
     getrlimit(RLIMIT_NOFILE, &lim);
+    assert(lim.rlim_max > 0);
     watched_fds = calloc(lim.rlim_max, 1);
 
     initialized = 1;
