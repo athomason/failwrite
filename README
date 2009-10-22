@@ -35,8 +35,9 @@ CAVEATS
 
 * With failwrite_ptrace, only the actual write syscalls are intercepted. I/O
   libraries (e.g. stdio in C or PerlIO in Perl) which do buffered output on
-  filehandles may not appear to fail until the handle is closed. Be sure to
-  program must check the return value of fclose as well as fwrite.
+  filehandles may not appear to fail until the handle is closed at the library
+  level and the buffer is flushed. In the case of stdio for instance, be sure
+  to check the return value of fclose as well as fwrite.
 
 * failwrite_ptrace doesn't prevent the write syscall from occurring, it just
   modifies the return value. If there was no actual error, the write will in
@@ -49,7 +50,11 @@ CAVEATS
 
 * failwrite_ptrace only works on i386 and x86_64 Linux systems.
 
-* failwrite_preload only works on Linux systems with a glibc major version of 6.
+* failwrite_preload only works on Linux systems whose glibc soname is
+  libc.so.6.
 
 * failwrite_ptrace cannot be used with strace in -f mode (or similar tools
   which also use ptrace to inspect children)
+
+* failwrite_preload runs the target executable under its own PID;
+  failwrite_ptrace runs it in a child process.
