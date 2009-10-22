@@ -1,0 +1,55 @@
+PURPOSE
+-------
+
+* failwrite_preload and failwrite_ptrace are executable wrappers that lie to
+  the programs they execute about the result of write operations to specific
+  named files. This capability may be useful in testing the error handling of
+  other programs upon write failure. Both take a POSIX regular expression to
+  determine which files should be lied about.
+
+USAGE
+-----
+
+General usage is the same for both programs:
+
+  failwrite_* <pattern> /path/to/executable [<arguments>]
+
+For example:
+
+  failwrite_ptrace 'test*' /usr/bin/perl -e \
+    'open $f, ">test.txt"; print $f 1; die "write error" unless close $f'
+
+MECHANISM
+---------
+
+* failwrite_ptrace intercepts the "open" system call to know which file
+  descriptors match the regular expression. It modifies the return value of the
+  "write" syscall for such interesting files to indicate failure.
+
+* Similarly, failwrite_preload intercepts glibc's open(2) call to track
+  interesting file descriptors and intercepts write(2) to prevent writes to
+  them.
+
+CAVEATS
+-------
+
+* With failwrite_ptrace, only the actual write syscalls are intercepted. I/O
+  libraries (e.g. stdio in C or PerlIO in Perl) which do buffered output on
+  filehandles may not appear to fail until the handle is closed. Be sure to
+  program must check the return value of fclose as well as fwrite.
+
+* failwrite_ptrace doesn't prevent the write syscall from occurring, it just
+  modifies the return value. If there was no actual error, the write will in
+  fact succeed. failwrite_preload on the other hand will not perform the write
+  during simulated failure.
+
+* failwrite_preload only works with programs which use the libc write(2)
+  function. This may not include things you would hope for; for instance,
+  libc's own fprintf doesn't use it, nor does Perl's layered I/O system.
+
+* failwrite_ptrace only works on i386 and x86_64 Linux systems.
+
+* failwrite_preload only works on Linux systems with a glibc major version of 6.
+
+* failwrite_ptrace cannot be used with strace in -f mode (or similar tools
+  which also use ptrace to inspect children)
