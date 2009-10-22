@@ -48,6 +48,10 @@ CAVEATS
   function. This may not include things you would hope for; for instance,
   libc's own fprintf doesn't use it, nor does Perl's layered I/O system.
 
+* failwrite_preload_lib.so must be locatable by the dynamic linker, either by
+  installing it into a path included in your /etc/ld.so.conf (e.g. /usr/lib),
+  or by setting the LD_LIBRARY_PATH environment variable.
+
 * failwrite_ptrace only works on i386 and x86_64 Linux systems.
 
 * failwrite_preload only works on Linux systems whose glibc soname is
