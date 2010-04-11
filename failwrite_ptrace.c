@@ -106,7 +106,7 @@ main(int argc, char** argv)
         if (entry) {
             /* copy args on syscall entry */
             ptrace(PTRACE_GETREGS, pid, NULL, &regs);
-            syscallno = regs.orig_rax;
+            syscallno = regs.SYSCALL_NUM;
         }
         else {
             /* do processing on syscall return */
